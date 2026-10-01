@@ -86,6 +86,7 @@ A connected Google Workspace or Microsoft 365 account used to send invitations
     provider_account_id       text not null
     email                     text not null
     display_name              text
+    provider_tenant_id        uuid null -> provider_tenant              -- 0066
 
     status                    mailbox_status not null default 'active'
 
@@ -131,12 +132,60 @@ The owner deferred the warm-up ramp because mailboxes are pre-warmed; detection
 and back-off remain required, because pre-warming establishes reputation and
 does not raise Google's external-invite limit.
 
+`provider_tenant_id` is set for Microsoft mailboxes and null for Google ones
+(ADR 0066). Exchange Online limits external recipients per tenant, so the
+mailboxes of one Microsoft tenant share a budget no single mailbox row can
+express. A Microsoft sending address on an `onmicrosoft.com` domain is refused
+at connection.
+
 `calendar_sync_token` is per mailbox per ADR 0041. A `410 GONE` clears it and
 triggers a full resync rather than leaving a silent gap.
 
 Tokens are `bytea` and encrypted under ADR 0033, with the key managed per ADR
 0049. `needs_reauth` is a first-class status because v1 proved it is a normal
 operating state, not an error.
+
+## provider_tenant
+
+ADR 0066. A Microsoft 365 tenant whose mailboxes this organisation has
+connected. Added 2026-10-01 as a slice correction.
+
+    id                        uuid pk
+    organisation_id           uuid not null -> organisation
+    provider                  mailbox_provider not null   -- 'microsoft' only today
+    external_tenant_id        text not null               -- Entra 'tid' claim
+
+    declared_licence_count    integer                     -- organiser-attested
+    declared_terrl            integer                     -- read from EAC, preferred
+    budget_fraction           numeric(3,2) not null default 0.50
+    daily_budget              integer not null            -- derived, stored
+
+    throttle_state            throttle_state not null default 'none'
+    throttled_until           timestamptz
+
+    created_at                timestamptz not null default now()
+    updated_at                timestamptz not null
+
+    unique (organisation_id, provider, external_tenant_id)
+    check  (provider = 'microsoft')
+    check  (budget_fraction > 0 and budget_fraction <= 1)
+
+RLS: enabled, forced.
+
+`daily_budget` is `budget_fraction` of the tenant's external recipient limit
+(TERRL). The limit is `declared_terrl` when the organiser has copied it from the
+Exchange admin center; otherwise it is computed from `declared_licence_count` as
+`500 x licences^0.7 + 9500`; with neither, it is the 5,000 trial cap. It is
+stored rather than derived on read because approval reads it inside a locking
+transaction, and recomputed whenever either declared value changes.
+
+The row is organisation-scoped like everything else. The same Microsoft tenant
+connected under two organisations is two rows with two budgets that cannot see
+each other. ADR 0066 accepts that rather than carving a cross-tenant lookup into
+ADR 0043's isolation.
+
+`throttle_state` here is the tenant-wide counterpart of `mailbox.throttle_state`:
+a sending-limit signal from any of the tenant's mailboxes reduces all of them.
 
 ## api_key
 

@@ -3,29 +3,32 @@
 # Pair this with a ruleset that requires review from Code Owners and these
 # become mandatory reviewers rather than a suggestion.
 #
-# Replace the placeholders with the two GitHub usernames before this does
-# anything. A CODEOWNERS file naming nobody is silently inert.
+# Every path names BOTH of you. Nobody can approve their own pull request, so a
+# path owned by one person alone could never merge a change that person wrote.
+# An owner without write access to the repository is silently ignored.
 
 # Default: either of you.
-# *  @growth-infi/engineers
+*                                @ez4hecker @ruatahmar
 
 # The three places where a mistake is either invisible or unrepairable.
 # CONTRIBUTING.md already says review is not optional here; this enforces it.
+# The default line already covers them; they are listed so the reason is
+# recorded next to the path, and so they survive a change to the default.
 
 # ADR 0046's rules are frozen from the first written row. A change here
 # orphans every existing suppression digest, silently and permanently.
-# /packages/crypto/                @REPLACE_ME
+/packages/crypto/                @ez4hecker @ruatahmar
 
 # withOrg(), the three roles, the RLS policies. Every later ticket assumes
 # this is right (E0-2).
-# /packages/db/                    @REPLACE_ME
+/packages/db/                    @ez4hecker @ruatahmar
 
 # An applied migration is not editable. A wrong one is a production incident.
-# /packages/db/migrations/         @REPLACE_ME
+/packages/db/migrations/         @ez4hecker @ruatahmar
 
 # ADR 0054: a decision is never edited in place. Superseding one should be a
 # conversation, not a commit.
-# /docs/adr/                       @REPLACE_ME
+/docs/adr/                       @ez4hecker @ruatahmar
 
 # The gates. Weakening one should be as visible as the rule it enforces.
-# /scripts/                        @REPLACE_ME
+/scripts/                        @ez4hecker @ruatahmar

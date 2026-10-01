@@ -44,7 +44,7 @@ gh api --method POST "repos/${REPO}/rulesets" \
       "parameters": {
         "required_approving_review_count": 1,
         "dismiss_stale_reviews_on_push": true,
-        "require_code_owner_review": false,
+        "require_code_owner_review": true,
         "require_last_push_approval": false,
         "required_review_thread_resolution": false
       }
@@ -66,17 +66,18 @@ gh api --method POST "repos/${REPO}/rulesets" \
 JSON
 
 echo
-echo "Done. Two things this does NOT do, both deliberate:"
+echo "Done. Two things worth knowing:"
 echo
-echo "  * required_approving_review_count is 1. With two people that means"
-echo "    every change is reviewed by the other one. If that is too heavy while"
-echo "    the foundation is still moving, set it to 0 - the status checks are"
-echo "    the part that matters and they still apply."
+echo "  * required_approving_review_count is 1 and code-owner review is on."
+echo "    .github/CODEOWNERS names both of you on every path, so every change"
+echo "    is approved by whichever of you did not write it. If that is too"
+echo "    heavy while the foundation is still moving, set the count to 0 - the"
+echo "    status checks are the part that matters and they still apply."
 echo
-echo "  * require_code_owner_review is false, because .github/CODEOWNERS is"
-echo "    still commented out. Fill in the two usernames, then flip this to"
-echo "    true so packages/crypto, packages/db and the migrations cannot be"
-echo "    changed without the other person seeing it."
+echo "  * A code owner without write access is silently ignored. Both"
+echo "    accounts must have write access (the engineers team) before this"
+echo "    ruleset is useful; otherwise pull requests wait for an approval"
+echo "    nobody is able to give."
 echo
 echo "The four placeholder gate jobs (E2, E6, E7, E8) are deliberately NOT"
 echo "required. They assert nothing yet; requiring them would train you both to"

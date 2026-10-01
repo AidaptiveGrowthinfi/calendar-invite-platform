@@ -14,13 +14,52 @@ the module it touches in `docs/spec/01-modules.md`. Those entries are not style
 advice - each one names a shape some schema slice explicitly rejected, so that
 it is not reintroduced by someone who has not read the slice.
 
+## Picking up a ticket
+
+The backlog lives in `docs/tickets/backlog.md` and is mirrored in Jira, project
+KAN, labelled `spec-v2`. Jira tracks who is doing what; the code always starts
+from this repository's `main`. Every ticket label carries its backlog id (`E8-3`)
+and a lane.
+
+1. **Pick.** Take the next ticket in your lane whose "is blocked by" links are
+   all Done. Assign it to yourself and move it to In Progress before writing
+   any code, so you never both pick the same one.
+2. **Branch** from an up-to-date `main`, with the Jira key first:
+
+       git checkout main && git pull
+       git checkout -b KAN-109-better-auth-organisation
+
+3. **Read** the ticket's acceptance criteria, the backlog section it cites, and
+   the module's "must not" list (see above).
+4. **Build** until every acceptance criterion is a passing test. That is the
+   definition of done, not "the code is written".
+5. **Open a pull request** titled with the key: `KAN-109 Better Auth and the
+organisation seam`. CI must be green.
+6. **Merge, then move the ticket to Done.** That unblocks whatever it was
+   blocking, which the other person may be waiting on.
+
+With the GitHub for Jira app installed, any branch, commit or pull request
+containing `KAN-xxx` appears on that ticket automatically. That is the reason
+for the key-first naming.
+
+A ticket that turns out to be wrong or under-specified is not quietly widened.
+Raise it (see "The one rule" below), and add a new ticket to both the backlog
+and Jira if new work is needed.
+
 ## Branches and review
 
-- Branch off `main`. Small branches; `main` stays deployable.
+- Branch off `main`, one ticket per branch. Small branches; `main` stays
+  deployable.
 - Open a pull request. CI must be green before merge.
 - Review is not optional for anything touching `packages/db`,
   `packages/crypto`, or a migration. Those are the places where a mistake is
   either invisible or unrepairable.
+- **Migrations merge one at a time.** Drizzle's `meta/` snapshot conflicts when
+  two branches each generate one. Whoever merges second pulls `main` and
+  regenerates their migration; never hand-merge the snapshot.
+- **The API contract moves first.** A change to an endpoint's shape edits
+  `docs/spec/02-api.md` in the same pull request, so the frontend is never
+  built against a contract that exists only in someone else's branch.
 
 ## The one rule that matters more than the others
 
@@ -96,10 +135,21 @@ sending to people who unsubscribed.
 
 ## Splitting the work
 
-The natural seam after E0 is backend against frontend: one person takes
-identity, audit, audience, campaigns and the send engine; the other takes the
-dashboard against the API contract in `docs/spec/02-api.md`. E8 is the critical
-path and deserves undivided attention.
+Tickets carry a lane label rather than an owner. The lanes are defined in
+`docs/tickets/backlog.md` under "Working in parallel":
+
+- `lane-core`: identity, audit, audience, campaigns, planning and the send
+  engine. E8 is the critical path and deserves one person's undivided
+  attention throughout.
+- `lane-platform`: entitlements, mailboxes, deliverability, responses,
+  attendance and billing. Start with E3; it unblocks four other areas.
+- `lane-frontend`: the dashboard, built against `docs/spec/02-api.md` with a
+  mock server until each endpoint lands.
+- `lane-owner`: accounts and decisions, not code.
+
+A workable rhythm: one person holds `lane-core`; the other starts on E3 and
+moves between `lane-platform` and `lane-frontend` as the core unblocks them.
+E0-5 (backups) blocks nothing and is good filler for whoever is waiting.
 
 Do not split by schema slice. Slices cut across modules and you would both be
 editing the same migration files.

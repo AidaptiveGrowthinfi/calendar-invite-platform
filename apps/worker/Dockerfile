@@ -8,7 +8,8 @@ COPY apps/worker ./apps/worker
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm exec tsc -b apps/worker
-RUN pnpm deploy --filter @apps/worker --prod /app
+# --legacy: pnpm 10 refuses `deploy` unless workspace packages are injected.
+RUN pnpm deploy --legacy --filter @apps/worker --prod /app
 
 FROM node:20.20.2-alpine AS runtime
 WORKDIR /app

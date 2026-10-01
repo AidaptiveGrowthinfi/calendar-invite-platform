@@ -10,7 +10,9 @@ COPY apps/api ./apps/api
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm exec tsc -b apps/api
-RUN pnpm deploy --filter @apps/api --prod /app
+# --legacy: pnpm 10 refuses `deploy` unless workspace packages are injected.
+# Legacy mode copies each workspace package's directory, dist/ included.
+RUN pnpm deploy --legacy --filter @apps/api --prod /app
 
 FROM node:20.20.2-alpine AS runtime
 WORKDIR /app

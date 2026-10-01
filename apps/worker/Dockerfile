@@ -1,4 +1,4 @@
-FROM node:20.20.2-alpine AS build
+FROM node:26.10.0-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 
@@ -11,7 +11,7 @@ RUN pnpm exec tsc -b apps/worker
 # --legacy: pnpm 10 refuses `deploy` unless workspace packages are injected.
 RUN pnpm deploy --legacy --filter @apps/worker --prod /app
 
-FROM node:20.20.2-alpine AS runtime
+FROM node:26.10.0-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 

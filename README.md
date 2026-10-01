@@ -3,6 +3,10 @@
 A SaaS platform for sending calendar invitations at scale to opted-in audiences
 and measuring attendance.
 
+> **This repository is public but not open source.** See [`LICENSE`](LICENSE).
+> Public visibility is how a two-person team gets branch protection and
+> unrestricted CI on GitHub Free; it is not a grant of rights.
+
 **Read [`CONTEXT.md`](CONTEXT.md) first.** It defines the domain vocabulary and,
 unusually, lists forbidden synonyms for each term. The ADRs, the schema and the
 specification all depend on that language, and `pnpm gate:vocabulary` enforces

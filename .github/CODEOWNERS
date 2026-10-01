@@ -1,0 +1,31 @@
+# Code owners. Available on public repositories with GitHub Free.
+#
+# Pair this with a ruleset that requires review from Code Owners and these
+# become mandatory reviewers rather than a suggestion.
+#
+# Replace the placeholders with the two GitHub usernames before this does
+# anything. A CODEOWNERS file naming nobody is silently inert.
+
+# Default: either of you.
+# *  @growth-infi/engineers
+
+# The three places where a mistake is either invisible or unrepairable.
+# CONTRIBUTING.md already says review is not optional here; this enforces it.
+
+# ADR 0046's rules are frozen from the first written row. A change here
+# orphans every existing suppression digest, silently and permanently.
+# /packages/crypto/                @REPLACE_ME
+
+# withOrg(), the three roles, the RLS policies. Every later ticket assumes
+# this is right (E0-2).
+# /packages/db/                    @REPLACE_ME
+
+# An applied migration is not editable. A wrong one is a production incident.
+# /packages/db/migrations/         @REPLACE_ME
+
+# ADR 0054: a decision is never edited in place. Superseding one should be a
+# conversation, not a commit.
+# /docs/adr/                       @REPLACE_ME
+
+# The gates. Weakening one should be as visible as the rule it enforces.
+# /scripts/                        @REPLACE_ME

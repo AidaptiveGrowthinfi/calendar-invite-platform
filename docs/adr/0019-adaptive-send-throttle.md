@@ -1,0 +1,5 @@
+# Use adaptive throttling for campaign sending
+
+Campaign sending will be paced by an adaptive throttle rather than a fixed interval such as exactly ten minutes. The throttle will account for organisation limits, sending-domain limits, native mailbox capacity, provider API limits, recipient-domain pacing, warm-up schedules, jitter, bounce rates, complaint rates, throttling responses, and campaign health so the platform can slow, pause, or resume sending safely.
+
+Recipient pacing uses a Delivery Bucket as well as an individual recipient domain. A Delivery Bucket is derived from the recipient's mailbox provider and MX host, so separately named domains hosted by the same provider are not incorrectly treated as independent capacity pools. The throttle owns atomic capacity reservations for each applicable limit; workers do not implement their own pacing rules. Provider throttles, deferrals, or health-state changes immediately reduce or suspend affected buckets and are released only through the Deliverability Gate's recovery policy.

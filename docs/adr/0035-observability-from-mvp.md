@@ -1,0 +1,5 @@
+# Include observability from the MVP
+
+The MVP will include structured logs, request IDs, campaign and job identifiers in logs, stored provider response codes, Sentry error tracking for web, API, and workers, health checks for API, worker, Redis, and PostgreSQL, and admin visibility into stuck jobs, throttled providers, token failures, webhook delays, and attendance sync issues. Provider-heavy background systems need operational visibility from launch because many failures happen asynchronously.
+
+Deliverability observability is organisation-, sending-domain-, campaign-, provider-route-, and Delivery-Bucket-scoped. It records authentication and DMARC-report status, webhook freshness and verification failures, accepted/delivered/deferred/bounced/complained/unsubscribed counts, provider responses, suppression decisions, and Campaign Health state transitions. It surfaces Gmail Postmaster and feedback data when available, never treats opens as authoritative, and alerts on paused campaigns, stale webhooks, rising deferrals, complaint thresholds, and reconciliation failures.

@@ -1,0 +1,7 @@
+table_name	approx_rows	total_size
+recipients	7	64 kB
+gmail_accounts	2	48 kB
+batch_recipients	0	24 kB
+campaign_senders	-1	40 kB
+campaigns	-1	32 kB
+event_batches	-1	32 kB

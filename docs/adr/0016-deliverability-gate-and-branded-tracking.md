@@ -1,0 +1,5 @@
+# Require a deliverability gate and branded tracking
+
+Calendar email campaigns must pass a deliverability gate before launch, including SPF, DKIM, DMARC, return-path, branded tracking domain, unsubscribe, bounce webhook, complaint webhook, suppression, and warm-up checks. Tracking and RSVP links will use customer-branded HTTPS domains with compact signed tokens instead of generic provider redirect domains or link shorteners, reducing suspicious link signals while keeping response tracking auditable.
+
+The gate is a stateful module, not a launch-time checklist. It manages `blocked`, `warming`, `eligible`, `slowed`, and `paused` states using versioned Campaign Health evidence. Health includes live DNS/authentication checks, provider webhook freshness, delivery, hard-bounce, deferral, complaint, unsubscribe, provider-throttle, and domain-reputation signals. The gate owns its configured thresholds and recovery hysteresis; a campaign cannot resume merely because a worker is retried. Gmail Postmaster data and DMARC aggregate reports are monitored when sufficient traffic exists, while lack of low-volume Postmaster data is not interpreted as good reputation.

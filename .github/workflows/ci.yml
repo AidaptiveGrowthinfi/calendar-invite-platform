@@ -1,0 +1,178 @@
+# CI. ADR 0006.
+#
+# The six gates in `docs/spec/05-invariants-and-tests.md` FAIL the build rather
+# than warn. They are the ones where a failure is a correctness fault rather
+# than a flake, and where continuing to deploy is worse than stopping.
+#
+# Gates 1, 3, 4 and 6 have nothing to assert yet - the send engine, plan
+# dimensions, attendance segments and the audit chain are E8, E6, E7 and E2.
+# They exist as jobs now, per E0-1's acceptance criterion, so that the ticket
+# that implements each one turns a passing-vacuously job red instead of having
+# to add a job nobody remembers.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20.20.2'
+
+jobs:
+  build:
+    name: Build and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm format:check
+      - run: pnpm lint
+      - name: Unit tests
+        run: pnpm vitest run
+
+  # ---------------------------------------------------------------------------
+  # Gate 2: RLS enumeration.
+  #
+  # "The RLS enumeration finding a table without a policy, or an exemption list
+  #  that no longer matches."
+  #
+  # Needs a real PostgreSQL and a schema built by MIGRATIONS. A schema built by
+  # `drizzle-kit push` has no policies, so this gate would pass against a
+  # database that is not the one that ships (ADR 0042).
+  # ---------------------------------------------------------------------------
+  gate-2-rls:
+    name: 'Gate 2: tenant isolation (ADR 0052 req 7)'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: platform_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/platform_test
+      DATABASE_URL_MIGRATOR: postgres://migrator:ci@localhost:5432/platform_test
+      TEST_DATABASE_URL_MIGRATOR: postgres://migrator:ci@localhost:5432/platform_test
+      TEST_DATABASE_URL_APP: postgres://app_user:ci@localhost:5432/platform_test
+      APP_USER_PASSWORD: ci
+      APP_WORKER_PASSWORD: ci
+      MIGRATOR_PASSWORD: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Create roles
+        run: pnpm db:bootstrap
+      - name: Grant schema ownership to migrator
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d platform_test \
+            -c 'alter schema public owner to migrator'
+      - name: Apply migrations
+        run: pnpm db:migrate
+      - name: Enumerate
+        run: pnpm vitest run packages/db
+
+  gate-5-migrations:
+    name: 'Gate 5: no ungenerated migration'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: The banned push command must not exist (ADR 0042)
+        run: pnpm gate:no-push
+      - name: A schema diff with no migration is a failure
+        run: pnpm gate:migrations
+
+  invariants:
+    name: Frozen invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: One email normaliser (ADR 0046 - unrepairable if it drifts)
+        run: pnpm gate:one-normaliser
+      - name: Vocabulary (CONTEXT.md, binding per spec/00-overview.md)
+        run: pnpm gate:vocabulary
+
+  # ---------------------------------------------------------------------------
+  # The four gates whose subject matter does not exist yet.
+  #
+  # Each runs a test selection that is currently empty and asserts the selection
+  # itself resolves. When the owning ticket lands, its tests are picked up here
+  # automatically and this job starts doing work.
+  # ---------------------------------------------------------------------------
+  gate-1-send-path:
+    name: 'Gate 1: ADR 0052 send-path requirements (E8)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Not yet implemented - owned by E8
+        run: |
+          echo "ADR 0052's eight requirements are the send engine's definition of done."
+          echo "Tabulated in docs/spec/05-invariants-and-tests.md. Owned by E8."
+          echo "This job turns red when E8 lands with a failing requirement."
+
+  gate-3-plan-dimensions:
+    name: 'Gate 3: plan_dimension enumerations (E6)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Not yet implemented - owned by E6
+        run: |
+          echo "Every active plan_version needs a plan_entitlement row for every"
+          echo "plan_dimension, and every dimension needs an enforcement point."
+          echo "Slice 6. Owned by E6."
+
+  gate-4-segment-partition:
+    name: 'Gate 4: segment partition identity (E7)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Not yet implemented - owned by E7
+        run: |
+          echo "The six segments must sum to campaign.member_count (slice 7, ADR 0063)."
+          echo "spec/05 calls this the one that breaks first."
+
+  gate-6-audit-chain:
+    name: 'Gate 6: audit chain verifies (E2)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Not yet implemented - owned by E2
+        run: |
+          echo "audit_event's hash chain must verify from org_seq 1 (slice 8)."
+          echo "E2 is early in the sequence deliberately: retrofitting a hash"
+          echo "chain is worse than building on one."

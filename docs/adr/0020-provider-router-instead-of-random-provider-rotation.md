@@ -1,0 +1,5 @@
+# Use a provider router instead of random provider rotation
+
+The MVP will integrate Google Calendar, Microsoft Graph Calendar, and one calendar email provider first, with the code structured around provider adapters so Mailgun, Brevo, or other providers can be added later. The platform will not randomly rotate providers as a spam-avoidance tactic; routing will be based on send mode, verified organisation configuration, provider health, warm-up state, rate limits, failover rules, and deliverability signals.
+
+For calendar email, an organisation's provider identity, sending domain, suppression state, and health metrics are isolated from those of other organisations wherever the provider supports it (for example, subaccounts or scoped credentials). The router must not silently fail over an unhealthy organisation to a platform or another customer's reputation pool. Provider failover is an explicit, compatible route for the same organisation and requires the target route to pass its own Deliverability Gate.

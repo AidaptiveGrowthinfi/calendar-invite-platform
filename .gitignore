@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# test and coverage
+coverage/
+.vitest/
+
+# secrets — see ADR 0049. Encrypted .sops.yaml-managed files ARE committed.
+# Anything below is plaintext and must never be.
+.env
+.env.*
+!.env.example
+*.key
+!*.enc.key
+age.key
+keys.txt
+
+# local scratch
+tmp/pdf-rendered/
+.DS_Store
+Thumbs.db
+
+# editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.shared.json
+.idea/
+
+# gate scratch (scripts/gate-migrations-current.mjs)
+packages/db/.gate-scratch/
+
+# Reference material with its own git repo, and scratch output.
+# tmp/mailVerify-inspect is the separate SMTP tool on ADR 0025 Option B.
+tmp/

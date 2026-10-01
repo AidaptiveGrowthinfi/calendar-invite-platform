@@ -1,0 +1,48 @@
+{
+  "name": "calendar-invite-platform",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=20.19 <21 || >=22"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "pnpm --filter @platform/db generate",
+    "db:migrate": "pnpm --filter @platform/db migrate",
+    "db:studio": "pnpm --filter @platform/db studio",
+    "dev:infra": "docker compose -f docker-compose.dev.yml up -d",
+    "dev:infra:down": "docker compose -f docker-compose.dev.yml down",
+    "gate:no-push": "node scripts/gate-no-drizzle-push.mjs",
+    "gate:migrations": "node scripts/gate-migrations-current.mjs",
+    "clean": "tsc -b --clean",
+    "db:bootstrap": "pnpm --filter @platform/db exec tsx src/bootstrap-roles.ts",
+    "gate:one-normaliser": "node scripts/gate-one-normaliser.mjs",
+    "gate:vocabulary": "node scripts/gate-vocabulary.mjs",
+    "gates": "pnpm gate:no-push && pnpm gate:migrations && pnpm gate:one-normaliser && pnpm gate:vocabulary"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.17.0",
+    "globals": "^17.12.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^2.1.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@tailwindcss/oxide"
+    ]
+  }
+}

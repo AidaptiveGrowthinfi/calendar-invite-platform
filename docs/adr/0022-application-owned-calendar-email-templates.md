@@ -1,0 +1,5 @@
+# Own calendar email templates and ICS generation in the application
+
+The application will generate its own calendar email content, including HTML, plain text, and `.ics` payloads, instead of relying on SendGrid-specific template behavior for calendar semantics. Templates may support UTF-8 content such as emojis in event descriptions, but calendar identity, UID, METHOD, SEQUENCE, ORGANIZER, ATTENDEE, timezone, reminders, tracking tokens, update, and cancellation behavior must remain application-owned and portable across email providers.
+
+Each contact receives a stable, private calendar UID and mail correlation identity. The `ORGANIZER` and visible From identity must be genuine, verified identities for the organisation; updates and cancellations reuse the UID and advance the sequence safely. Templates must render an honest sender identity, a visible unsubscribe/preference link where required, and no hidden or misleading content. HTML and plain-text variants are both required; open tracking remains best-effort analytics and is not used as a deliverability-health gate.

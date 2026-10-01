@@ -1,0 +1,21 @@
+{
+  "name": "@apps/worker",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@platform/config": "workspace:*",
+    "@platform/crypto": "workspace:*",
+    "@platform/db": "workspace:*",
+    "@platform/observability": "workspace:*",
+    "@platform/shared": "workspace:*",
+    "bullmq": "^5.34.5",
+    "ioredis": "^5.4.2",
+    "reflect-metadata": "^0.2.2"
+  }
+}

@@ -1,0 +1,5 @@
+# Use native calendar APIs with capacity-gated sending
+
+We will use Google Calendar API and Microsoft Graph Calendar as the core sending integrations for the MVP, with campaign throughput gated by the safe capacity of the customer's connected mailboxes. The platform will not promise a fixed same-day volume such as 50,000 invites for every customer; instead it will calculate whether the customer's connected mailboxes can safely support the requested campaign and offer a multi-day plan when capacity is insufficient.
+
+Native Calendar Mode is reserved for expected, lower-volume invitations sent by a real connected organiser mailbox. It is not a bulk-email bypass. The planner will create one private event identity per contact, respect each provider's invitation limits and responses, and never reveal a campaign audience to other attendees through a shared event attendee list. Calendar-mode campaigns retain the same suppression, pause, audit, and campaign-health controls as calendar email campaigns.

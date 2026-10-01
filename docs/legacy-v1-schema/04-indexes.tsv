@@ -1,0 +1,9 @@
+tablename	indexname	indexdef
+batch_recipients	batch_recipients_pkey	CREATE UNIQUE INDEX batch_recipients_pkey ON public.batch_recipients USING btree (id)
+campaign_senders	campaign_senders_campaign_id_gmail_account_id_key	CREATE UNIQUE INDEX campaign_senders_campaign_id_gmail_account_id_key ON public.campaign_senders USING btree (campaign_id, gmail_account_id)
+campaign_senders	campaign_senders_pkey	CREATE UNIQUE INDEX campaign_senders_pkey ON public.campaign_senders USING btree (id)
+campaigns	campaigns_pkey	CREATE UNIQUE INDEX campaigns_pkey ON public.campaigns USING btree (id)
+event_batches	event_batches_pkey	CREATE UNIQUE INDEX event_batches_pkey ON public.event_batches USING btree (id)
+gmail_accounts	gmail_accounts_pkey	CREATE UNIQUE INDEX gmail_accounts_pkey ON public.gmail_accounts USING btree (id)
+gmail_accounts	gmail_accounts_user_id_email_key	CREATE UNIQUE INDEX gmail_accounts_user_id_email_key ON public.gmail_accounts USING btree (user_id, email)
+recipients	recipients_pkey	CREATE UNIQUE INDEX recipients_pkey ON public.recipients USING btree (id)

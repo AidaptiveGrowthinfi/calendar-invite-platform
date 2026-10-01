@@ -1,0 +1,46 @@
+# Local development infrastructure only. The applications run on the host.
+#
+# PostgreSQL and Redis are real, not substitutes: `spec/05-invariants-and-tests.md`
+# requires a real PostgreSQL instance for everything touching concurrency, RLS,
+# constraints or transactions, because "a mock asserts only that the code
+# called it".
+#
+#   pnpm dev:infra          start
+#   pnpm dev:infra:down     stop
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cip_postgres
+    environment:
+      # Local development only. Production credentials come from SOPS at
+      # deploy time (ADR 0049) and never from a compose file.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: platform
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d platform']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: cip_redis
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:

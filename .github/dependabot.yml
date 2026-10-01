@@ -17,6 +17,13 @@ updates:
       # and do one at a time.
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+      # Drizzle is pre-1.0, where a "minor" bump is a breaking release. It
+      # builds every migration and the RLS policies gate 2 checks, so it moves
+      # only as a deliberate, tested upgrade - never inside a routine group.
+      - dependency-name: 'drizzle-orm'
+        update-types: ['version-update:semver-minor']
+      - dependency-name: 'drizzle-kit'
+        update-types: ['version-update:semver-minor']
 
   - package-ecosystem: github-actions
     directory: /

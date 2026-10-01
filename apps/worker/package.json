@@ -15,7 +15,7 @@
     "@platform/observability": "workspace:*",
     "@platform/shared": "workspace:*",
     "bullmq": "^5.34.5",
-    "ioredis": "^5.4.2",
+    "ioredis": "^6.0.0",
     "reflect-metadata": "^0.2.2"
   }
 }

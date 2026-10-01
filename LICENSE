@@ -1,0 +1,17 @@
+Copyright (c) 2026 GrowthInfi. All rights reserved.
+
+This repository is PUBLICLY VISIBLE. It is not open source.
+
+Public visibility here is a consequence of how this project is hosted, not a
+grant of rights. No permission is given to use, copy, modify, merge, publish,
+distribute, sublicense, or sell any part of this software or its documentation.
+
+Viewing the source and forking within GitHub, as GitHub's Terms of Service
+permit for public repositories, is the extent of what is allowed. Everything
+else requires written permission from GrowthInfi.
+
+The documentation in `docs/` - the architecture decision records, the schema
+design, the specification, and the backlog - is covered by this notice on the
+same terms as the code.
+
+Contact: inboundgrowths@gmail.com

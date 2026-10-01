@@ -20,6 +20,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The repository is public, so workflows can be triggered by anyone who opens a
+# pull request. Read-only by default; a job that needs to write says so itself.
+# The deploy job, when it exists, runs on push to main only - a pull_request
+# trigger from a fork cannot see repository secrets, and moving deployment into
+# that trigger would be the way to break it.
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: '20.20.2'
 

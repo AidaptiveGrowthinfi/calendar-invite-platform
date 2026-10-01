@@ -1,6 +1,6 @@
 # ADR 0056: the dashboard build is static files the VPS reverse proxy serves
 # directly. There is no Node process for the frontend.
-FROM node:20.20.2-alpine AS build
+FROM node:26.10.0-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 

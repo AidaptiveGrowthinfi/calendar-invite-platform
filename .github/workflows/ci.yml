@@ -36,7 +36,7 @@ jobs:
     name: Build and unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -82,7 +82,7 @@ jobs:
       APP_WORKER_PASSWORD: ci
       MIGRATOR_PASSWORD: ci
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -103,7 +103,7 @@ jobs:
     name: 'Gate 5: no ungenerated migration'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -120,7 +120,7 @@ jobs:
     name: Frozen invariants
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -144,7 +144,7 @@ jobs:
     name: 'Gate 1: ADR 0052 send-path requirements (E8)'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Not yet implemented - owned by E8
         run: |
           echo "ADR 0052's eight requirements are the send engine's definition of done."
@@ -155,7 +155,7 @@ jobs:
     name: 'Gate 3: plan_dimension enumerations (E6)'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Not yet implemented - owned by E6
         run: |
           echo "Every active plan_version needs a plan_entitlement row for every"
@@ -166,7 +166,7 @@ jobs:
     name: 'Gate 4: segment partition identity (E7)'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Not yet implemented - owned by E7
         run: |
           echo "The six segments must sum to campaign.member_count (slice 7, ADR 0063)."
@@ -176,7 +176,7 @@ jobs:
     name: 'Gate 6: audit chain verifies (E2)'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Not yet implemented - owned by E2
         run: |
           echo "audit_event's hash chain must verify from org_seq 1 (slice 8)."

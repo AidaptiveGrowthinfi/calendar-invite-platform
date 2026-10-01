@@ -1,0 +1,5 @@
+# Use idempotent background invitation sending
+
+Every invitation operation will use a stable idempotency key stored in PostgreSQL, based on campaign, contact, and operation identity rather than timestamps. Native calendar sending may require one provider event operation per contact, so large campaigns will run as visible, resumable background work with per-mailbox limits, provider backoff, stored provider event IDs, durable attempt records, and dashboard progress instead of synchronous user-facing sends.
+
+The send module owns the uncertainty between recording a planned attempt and receiving a provider response. It will use a PostgreSQL reservation and transactional outbox before enqueueing work, then reconcile provider responses and webhook events back to that reservation. A timeout is an `unknown` outcome, not permission to create a new invitation. Workers retry only through the same stable identity; webhook ingestion is signature-verified, deduplicated, replay-safe, and can be reconciled from provider exports or APIs when delivery is uncertain.

@@ -1,0 +1,46 @@
+table_name	ordinal_position	column_name	data_type	is_nullable	column_default
+batch_recipients	1	id	uuid	NO	extensions.uuid_generate_v4()
+batch_recipients	2	batch_id	uuid	YES	
+batch_recipients	3	recipient_id	uuid	YES	
+campaign_senders	1	id	uuid	NO	extensions.uuid_generate_v4()
+campaign_senders	2	campaign_id	uuid	NO	
+campaign_senders	3	gmail_account_id	uuid	NO	
+campaign_senders	4	created_at	timestamp without time zone	YES	now()
+campaigns	1	id	uuid	NO	extensions.uuid_generate_v4()
+campaigns	2	user_id	uuid	NO	
+campaigns	3	name	text	YES	
+campaigns	4	event_title	text	NO	
+campaigns	5	meeting_link	text	NO	
+campaigns	6	start_time	timestamp without time zone	NO	
+campaigns	7	end_time	timestamp without time zone	NO	
+campaigns	8	description	text	YES	
+campaigns	9	batch_size	integer	YES	20
+campaigns	10	status	text	YES	'draft'::text
+campaigns	11	created_at	timestamp without time zone	YES	now()
+campaigns	12	timezone	text	YES	
+event_batches	1	id	uuid	NO	extensions.uuid_generate_v4()
+event_batches	2	campaign_id	uuid	NO	
+event_batches	3	gmail_account_id	uuid	NO	
+event_batches	4	google_event_id	text	YES	
+event_batches	5	recipient_count	integer	YES	
+event_batches	6	status	text	YES	'pending'::text
+event_batches	7	created_at	timestamp without time zone	YES	now()
+gmail_accounts	1	id	uuid	NO	extensions.uuid_generate_v4()
+gmail_accounts	2	user_id	uuid	NO	
+gmail_accounts	3	email	text	NO	
+gmail_accounts	4	refresh_token	text	NO	
+gmail_accounts	5	access_token	text	YES	
+gmail_accounts	6	expiry_date	timestamp without time zone	YES	
+gmail_accounts	7	daily_limit	integer	YES	50
+gmail_accounts	8	sent_today	integer	YES	0
+gmail_accounts	9	last_sent_at	timestamp without time zone	YES	
+gmail_accounts	10	next_send_at	timestamp without time zone	YES	
+gmail_accounts	11	status	text	YES	'active'::text
+gmail_accounts	12	created_at	timestamp without time zone	YES	now()
+recipients	1	id	uuid	NO	extensions.uuid_generate_v4()
+recipients	2	campaign_id	uuid	NO	
+recipients	3	email	text	NO	
+recipients	4	assigned_gmail_account_id	uuid	YES	
+recipients	5	status	text	YES	'pending'::text
+recipients	6	error	text	YES	
+recipients	7	created_at	timestamp without time zone	YES	now()

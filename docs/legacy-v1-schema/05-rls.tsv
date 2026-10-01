@@ -1,0 +1,7 @@
+table_name	rls_enabled	rls_forced
+batch_recipients	false	false
+campaign_senders	false	false
+campaigns	false	false
+event_batches	false	false
+gmail_accounts	false	false
+recipients	false	false

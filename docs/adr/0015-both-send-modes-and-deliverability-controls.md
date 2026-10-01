@@ -1,0 +1,5 @@
+# Build both send modes with deliverability controls in the MVP
+
+We will implement both native calendar mode and calendar email mode in the MVP. Calendar email mode will require per-organisation sender domain authentication, provider webhooks, one-click unsubscribe, suppression enforcement, bounce and complaint handling, gradual sending limits, and deliverability monitoring; the platform will not claim inbox placement is guaranteed, but it will block or slow campaigns when sender reputation, authentication, bounce, throttling, or complaint signals make delivery unsafe.
+
+Calendar Email Mode must distinguish promotional/event-invitation traffic from transactional product traffic. It will send an RFC 8058 one-click unsubscribe header and a visible body unsubscribe link for relevant traffic, and suppress the contact before planning and immediately before provider submission. Native provider-generated notifications cannot be assumed to carry those headers, so their campaigns remain capacity-gated and include a platform preference link where the provider allows event-description content.

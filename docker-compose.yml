@@ -1,0 +1,69 @@
+# Production, on the VPS. ADR 0006.
+#
+# GitHub Actions builds and pushes images to GHCR; this file pulls the updated
+# images and restarts the changed services. Four containers plus PostgreSQL and
+# Redis, per spec/00-overview.md.
+#
+# Environment comes from a file SOPS decrypts at deploy time (ADR 0049). There
+# is no plaintext .env committed and none should exist on the VPS outside the
+# deploy step.
+services:
+  api:
+    image: ghcr.io/growth-infi/calendar-invite-platform-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: [.env.runtime]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports:
+      - '127.0.0.1:3000:3000'
+
+  worker:
+    image: ghcr.io/growth-infi/calendar-invite-platform-worker:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: [.env.runtime]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  web:
+    image: ghcr.io/growth-infi/calendar-invite-platform-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - '127.0.0.1:8080:80'
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: [.env.runtime]
+    environment:
+      POSTGRES_DB: platform
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # ADR 0036 and ADR 0050: daily base backups plus continuous WAL
+      # archiving off the VPS, RPO 15 minutes, RTO 4 hours by rehearsed
+      # restore. Configured in E0-5 - the rehearsal is the deliverable, not
+      # this mount.
+      - ./backups:/backups
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d platform']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -86,6 +86,17 @@ export async function bootstrapRoles(adminUrl: string): Promise<void> {
       }
     }
 
+    // The migrator owns the schema, and drizzle's runner records applied
+    // migrations in a `drizzle` schema it creates on first run. PostgreSQL 15+
+    // gives an ordinary role neither CREATE on the database nor ownership of
+    // `public`, so without these the first `db:migrate` fails on permissions.
+    // Both are idempotent.
+    const [database] = await sql<Array<{ name: string }>>`select current_database() as name`;
+    const databaseName = (database as { name: string }).name.replace(/"/gu, '""');
+    await sql.unsafe(`grant create on database "${databaseName}" to migrator`);
+    await sql.unsafe('alter schema public owner to migrator');
+    process.stdout.write(`migrator owns schema public and may create schemas in ${databaseName}\n`);
+
     process.stdout.write('roles bootstrapped\n');
   } finally {
     await sql.end();

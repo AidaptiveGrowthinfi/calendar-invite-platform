@@ -91,11 +91,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Create roles
+        # Also grants the migrator ownership of `public` and CREATE on the
+        # database - see bootstrap-roles.ts.
         run: pnpm db:bootstrap
-      - name: Grant schema ownership to migrator
-        run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -d platform_test \
-            -c 'alter schema public owner to migrator'
       - name: Apply migrations
         run: pnpm db:migrate
       - name: Enumerate

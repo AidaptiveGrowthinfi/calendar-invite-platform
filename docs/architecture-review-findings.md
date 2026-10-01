@@ -878,3 +878,271 @@ missing and that W17 needs. Analysis queries to be written once
 - Delivery Buckets keyed on provider/MX, not domain name (0019). Correct.
 - Deliverability gate as a state machine with hysteresis (0016). Correct.
 - Domain glossary with explicit "Avoid" terms (CONTEXT.md). Keep doing this.
+- Random intervals between sends as a spam-avoidance tactic. Not adopted; see
+  W43. Gmail's guidance is the opposite - a consistent rate - and randomised
+  delays to look human are the same class of evasion as 0020's rotation.
+
+## G. Deliverability review, 2026-10-01
+
+Raised in a review aimed at inbox placement and send speed for calendar email
+mode and native mode. The owner asked for the helpful ones to be recorded and
+ticketed; each is `open` with a recommendation until an ADR or slice
+correction closes it. Tickets carrying each are in `tickets/backlog.md` under
+"Deliverability review additions".
+
+Consent is out of scope by owner instruction and ADR 0038 stands.
+
+### W30 - Microsoft mailboxes get no capacity margin under ADR 0047
+Status: closed 2026-10-01 -> ADR 0066, with a correction to the premise
+Refs: 0047, 0058, slice 1 `mailbox.daily_capacity_target`
+
+CORRECTION 2026-10-01, recorded while writing ADR 0066. The premise below is
+wrong. Microsoft withdrew the per-mailbox External Recipient Rate limit on
+2026-01-06 (MC787382 update: "we have decided not to proceed with the rollout
+of this limit"); it was never enforced. The per-mailbox ceiling is the
+10,000-recipient rate limit, so 0047's 2,000 default has the same one-fifth
+margin for Microsoft as for Google and stands. The real Microsoft risk is the
+tenant-wide external recipient limit (TERRL, `500 x licences^0.7 + 9500` per
+24 hours), which several connected mailboxes share and which, when breached,
+blocks external mail for the customer's whole tenant. ADR 0066 budgets
+against that instead. The original text is retained below as the record of
+what was raised.
+
+ADR 0047 sets `daily_capacity_target` to 2,000 for every mailbox and justifies
+it as one fifth of Google's documented throttle point. It has no Microsoft
+section. Exchange Online's External Recipient Rate limit is **2,000 external
+recipients per rolling 24 hours**, enforced for new and trial tenants from
+April 2026 and for existing tenants from 1 October 2026 (Microsoft 365 message
+center MC787382).
+
+For a Microsoft mailbox the default target therefore *is* the limit, with no
+margin, and the mailbox's ordinary human mail draws on the same 2,000. The
+first campaign that commits a Microsoft mailbox's full day will throttle the
+customer's tenant - the exact customer-visible failure 0047 exists to prevent.
+
+Recommendation: the default target is per provider, not one number. Microsoft
+starts at 1,200 (leaving room for the mailbox's own traffic), Google stays at
+2,000. The Microsoft limit is a rolling 24-hour window, so the throttle must
+smooth over a rolling window rather than trusting the organisation-day bucket
+in slice 4, which 0047 already warns is the platform's accounting unit, not the
+provider's. Needs an ADR amending 0047 with a sourced Microsoft section.
+
+### W31 - The gate cannot see Gmail spam complaints
+Status: open - recommendation below
+Refs: 0016, 0021, slice 5 `campaign_health.complaint_rate`
+
+Gmail does not send per-message complaint feedback to senders. Provider
+`spamreport` events come from feedback loops run by Yahoo, Microsoft and
+others. `complaint_rate` will therefore read near zero for the Gmail delivery
+bucket - usually the largest - while that bucket is the one most likely to be
+filtered. Postmaster Tools is the only Gmail source, and it is daily,
+aggregate, lagged, and absent at low volume.
+
+This is the same trap 0016 already names for webhook silence and low-volume
+Postmaster data, applied to a signal the schema currently treats as measured.
+
+Recommendation:
+- Add a `Feedback-ID` header (campaign, organisation, mode, sender) so
+  Postmaster's feedback-loop dashboard reports spam rate per campaign.
+- Treat Gmail complaint rate as `unknown`, never zero, in the gate.
+- Evaluate proxies per delivery bucket: unsubscribe rate, decline rate,
+  deferral rate, and time-to-delivered (W42).
+- Ingest the Postmaster spam rate into `campaign_health.signals` and let the
+  gate read it once a domain has enough volume to produce it.
+
+### W32 - Fast sending can outrun the gate
+Status: open - recommendation below
+Refs: 0016, 0019, slice 5
+
+Delivery, bounce and deferral outcomes arrive by webhook minutes after
+submission, and the gate evaluates on a schedule. Nothing limits how much is
+submitted before the first outcome is observed. If the throttle grants
+capacity, a whole delivery bucket can be submitted before a single
+`campaign_health` row has a meaningful `sample_size`.
+
+Recommendation, two mechanisms in the throttle:
+- **Canary.** Each delivery bucket of a campaign starts with a small batch -
+  1-2% or 100-200 messages, whichever is larger - and waits for outcomes before
+  ramping.
+- **In-flight cap.** A throttle dimension limiting messages submitted but not
+  yet settled (delivered, bounced or deferred) per bucket.
+
+This is also the speed lever: once the canary is clean, the gate can grant full
+rate with evidence behind it instead of a conservative constant.
+
+### W33 - Dispatch has head-of-line blocking across delivery buckets
+Status: open - recommendation below
+Refs: 0019, `spec/03-workers-and-jobs.md` dispatch, slice 4
+
+The dispatch reservation selects the oldest `reserved` attempts for the
+organisation, then step 1 asks the throttle. When one bucket - typically Gmail
+- is throttled, workers repeatedly reserve that bucket's attempts and hand them
+back, while attempts for other buckets wait behind them. Throughput collapses
+to the slowest bucket.
+
+Recommendation: carry `delivery_bucket` on `invitation_attempt`, written at
+reservation from `contact.delivery_bucket`, and select only from buckets with
+available throttle capacity, round-robin across buckets. A slice 4 column and a
+change to the reservation query's predicate; the `FOR UPDATE SKIP LOCKED`
+shape is unchanged.
+
+### W34 - Native mode has no authentication checks and no spam signal
+Status: open - recommendation below
+Refs: 0010, 0016, 0047, slice 5 `sending_domain_dns_record`
+
+DNS checks exist only for calendar email sending domains. A connected
+Workspace or Microsoft 365 mailbox whose domain has no DKIM key (Workspace
+DKIM is off until an admin generates one) or no DMARC record fails Gmail and
+Yahoo's bulk-sender requirements, and nothing in the platform notices.
+
+Separately, a recipient who reports a native calendar invitation as spam
+reports it to Google or Microsoft about the customer's account. The platform
+receives no signal; only the customer's tenant absorbs the consequence.
+
+Recommendation: run the slice 5 DNS checks against each mailbox's domain and
+feed them to the gate for native campaigns; treat decline rate and provider
+throttling as the native mode proxies for complaints.
+
+### W35 - A valid DNS record is not a passing message
+Status: open - recommendation below
+Refs: 0016, slice 5
+
+The gate verifies records exist and match. Alignment failures - DKIM signed
+with the provider's domain instead of the customer's, SPF over the ten-lookup
+limit, a From domain not aligned with either - only appear on a real message.
+And "delivered" from the provider means accepted by the receiving server, not
+placed in the inbox; the platform currently has no measurement of placement at
+all.
+
+Recommendation: a pre-launch and periodic self-test. Send a real invitation to
+platform-owned seed mailboxes at Gmail, Outlook and Yahoo; parse
+`Authentication-Results` for aligned SPF, DKIM and DMARC passes; record inbox
+or spam placement as a gate signal.
+
+### W36 - The calendar email MIME structure and ORGANIZER reply path are undefined
+Status: open - recommendation below
+Refs: 0011, 0022, slice 4 `invitation_response`
+
+ADR 0022 lists the parts - HTML, plain text, ICS - but not their structure.
+Clients render a native invitation card only from a `text/calendar;
+method=REQUEST` part inside `multipart/alternative`; the wrong structure
+produces a plain mail with an attachment.
+
+When a recipient clicks "Yes" in Gmail or Outlook, the client sends an iTIP
+`REPLY` by email to the `ORGANIZER` address. If that is unmonitored, the
+replies bounce and generate backscatter; if it is the customer's own inbox,
+they receive thousands of response mails. Neither is designed.
+
+Recommendation:
+- Fix the structure in 0022's successor: `multipart/mixed` >
+  `multipart/alternative` (`text/plain`, `text/html`, `text/calendar;
+  method=REQUEST`), with the `.ics` optionally repeated as an attachment.
+- `ORGANIZER` is a verified address on the organisation's RSVP host, whose
+  inbound mail the platform parses (SendGrid Inbound Parse first). Native
+  replies are then recorded in `invitation_response` alongside hosted RSVP,
+  narrowing the gap 0011 accepts, and replies to the sender are a positive
+  engagement signal. `ORGANIZER` and `From` stay on the same verified domain.
+
+### W37 - Volume spikes on established domains are not controlled
+Status: open - recommendation below
+Refs: 0019, slice 5 `warmup_state`
+
+Warm-up limits apply while `warmup_state = 'warming'` and end at
+`established`. Gmail's sender guidelines ask for a consistent rate and warn
+against sudden volume spikes. An established domain sending 2,000 a week and
+then 50,000 on webinar day is a spike, and nothing in the throttle sees it.
+
+Recommendation: a throttle dimension capping a sending domain's daily volume
+per delivery bucket at a multiple - start at 3x - of its trailing 14-day
+average, with warm-up as the special case of a zero history. The planner
+already produces multi-day plans under 0058 and spreads a campaign that
+exceeds it.
+
+### W38 - Send order ignores engagement the platform already holds
+Status: open - recommendation below
+Refs: slice 4 dispatch order, slices 4 and 7
+
+Dispatch is ordered by `reserved_at`. The platform holds each contact's prior
+responses and attendance within the organisation. Sending first to contacts who
+previously accepted or attended earns early positive engagement and gives the
+canary (W32) its cleanest reading.
+
+Lists decay regardless of how they were obtained. Contacts who have not engaged
+across several campaigns are the main source of bounces and spam-folder
+filtering.
+
+Recommendation: an engagement tier on the planner's ordering, and a sunset
+rule holding back contacts with no engagement across N campaigns from the
+default selection. Sunset is a planner default the organiser can override, not
+suppression; ADR 0039's permanent suppression is unchanged.
+
+### W39 - No decision on shared versus dedicated IPs
+Status: open - needs a decision
+Refs: 0017, 0020, 0021, slice 5
+
+0020's isolation is per organisation in domain, credentials and suppression.
+On SendGrid's shared IP pool, IP reputation is shared with other SendGrid
+customers. A dedicated IP isolates that, but only performs well at steady high
+volume and needs its own warm-up - and the schema tracks warm-up for domains
+only.
+
+Recommendation: shared pool below a monthly volume threshold, dedicated IP with
+tracked IP warm-up above it; `ip_pool` on `email_provider_account`. Needs an
+ADR and the threshold number.
+
+### W40 - Invitation traffic should default to its own subdomain
+Status: open - recommendation below
+Refs: 0015, 0017, slice 5 `sending_domain`
+
+0017 permits sending from the organisation's root domain. Invitation traffic on
+the root domain shares reputation with the customer's corporate mail in both
+directions. 0015 already requires invitation and transactional traffic be
+distinguished.
+
+Recommendation: domain setup defaults to a dedicated subdomain (for example
+`events.<domain>`) and warns on a root domain. A setup default, not a schema
+change.
+
+### W41 - No content or domain-reputation preflight
+Status: open - recommendation below
+Refs: 0016, 0022, 0023
+
+Three cheap checks are missing:
+- Gmail clips HTML bodies over about 102 KB, hiding the visible unsubscribe
+  link at the bottom of the message.
+- Newly registered domains are a strong spam signal; a tracking or RSVP host
+  registered last week counts against every link in the message.
+- Sending, tracking and RSVP domains can be listed on domain blocklists
+  (Spamhaus DBL and similar) without the platform knowing.
+
+Recommendation: a render-time size and link lint on templates, and domain age
+plus blocklist status as gate inputs beside the DNS checks.
+
+### W42 - Time-to-inbox is not measured, and late invitations are still sent
+Status: open - recommendation below
+Refs: 0019, 0035, slice 5
+
+Submit-to-delivered latency per delivery bucket is the earliest sign of
+receiver throttling and is the platform's real speed number. It is not
+recorded. Deferred mail is retried by the provider for an extended period, so
+an invitation can arrive after the webinar it announces.
+
+Recommendation: record submit-to-delivered latency per bucket as a health
+signal and dashboard metric; refuse to submit, and mark `abandoned`, any
+invitation whose expected delivery falls after the event start.
+
+### W43 - "Jitter" is named in 0019 and never defined
+Status: open - recommendation below
+Refs: 0019, `architecture-decision-brief.md` send engine
+
+0019 lists jitter among the throttle's inputs without saying what it does. It
+was proposed in review that random intervals between sends reduce spam
+filtering of warmed mail. That is not supported: Gmail's sender guidelines ask
+for a consistent rate and say nothing in favour of randomness; in calendar
+email mode the provider's MTAs, not submission timing, are what receivers see;
+and randomised delays to appear human are the evasion 0020 already rejects.
+They would also cut throughput sharply.
+
+Recommendation: define jitter as smoothing. The throttle spreads each window's
+budget evenly across the send window per delivery bucket and applies small
+jitter only to de-synchronise workers. No randomised human-mimicking delays.

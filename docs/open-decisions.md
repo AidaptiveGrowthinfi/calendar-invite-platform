@@ -1,6 +1,34 @@
 # Open Decisions
 
-Last reviewed 2026-09-08.
+Last reviewed 2026-10-01.
+
+## Raised 2026-10-01: deliverability review
+
+Fourteen findings, W30 to W43, in `architecture-review-findings.md` section G.
+None blocks the build; each has a recommendation and a ticket in
+`tickets/backlog.md` under "Deliverability review additions". The ones that
+need an ADR before their ticket merges:
+
+| Finding | Needs | Urgency |
+| --- | --- | --- |
+| ~~W30 Microsoft capacity~~ | **Closed 2026-10-01 by ADR 0066.** The per-mailbox limit W30 cited was withdrawn by Microsoft; the default stays 2,000, and Microsoft mailboxes are budgeted per tenant at half of TERRL | Done |
+| W36 MIME and ORGANIZER | ADR succeeding 0022: MIME structure, ORGANIZER on the RSVP host with inbound parsing | Before E10-6 |
+| W39 Shared vs dedicated IP | ADR and a volume threshold | Before the first high-volume customer |
+| W32, W37, W43 throttle | ADR amending 0019: canary, in-flight cap, spike cap, jitter defined as smoothing | Before E10-4 |
+
+The rest - W31, W33, W34, W35, W38, W40, W41, W42 - are implementation inside
+existing decisions and go straight to their tickets.
+
+**OPEN-S3, proposed starting thresholds.** Offered so the gate can be built
+against real numbers; `thresholds_version` makes them safe to change.
+
+| Signal | Slow | Pause | Notes |
+| --- | --- | --- | --- |
+| Postmaster spam rate (Gmail) | 0.08% | 0.15% | Never approach 0.30%, Gmail's line |
+| Provider complaint rate (non-Gmail) | 0.08% | 0.15% | Gmail reads `unknown`, W31 |
+| Hard bounce rate | 2% | 4% | While `warming`: hard stop at 2% (0051) |
+| Deferral rate, per bucket | 5% | 15% | Pauses the bucket, not the campaign |
+| Minimum sample per bucket | 200 | - | Below it, rates do not move the gate |
 
 ## Architecture
 

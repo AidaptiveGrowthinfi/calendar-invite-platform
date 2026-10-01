@@ -4,6 +4,12 @@ Date: 2026-09-03
 Closes: W4, W12
 Refs: 0010, 0019
 
+AMENDED IN PART by ADR 0066 on 2026-10-01. This ADR's limits are Google's only.
+ADR 0066 adds the Microsoft section: the 2,000 per-mailbox default stands for
+Microsoft too, and Microsoft mailboxes are additionally budgeted per tenant
+against Exchange Online's tenant external recipient limit. Retained unedited
+otherwise as the original record.
+
 ADR 0010 gates campaign throughput on "the safe capacity of the customer's
 connected mailboxes" without saying what that capacity is or where the number
 comes from. This ADR supplies the numbers and their sources, and states the

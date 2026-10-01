@@ -9,7 +9,7 @@
 # deploy step.
 services:
   api:
-    image: ghcr.io/growth-infi/calendar-invite-platform-api:${IMAGE_TAG:-latest}
+    image: ghcr.io/aidaptivegrowthinfi/calendar-invite-platform-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: [.env.runtime]
     depends_on:
@@ -19,7 +19,7 @@ services:
       - '127.0.0.1:3000:3000'
 
   worker:
-    image: ghcr.io/growth-infi/calendar-invite-platform-worker:${IMAGE_TAG:-latest}
+    image: ghcr.io/aidaptivegrowthinfi/calendar-invite-platform-worker:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: [.env.runtime]
     depends_on:
@@ -27,7 +27,7 @@ services:
       redis: { condition: service_healthy }
 
   web:
-    image: ghcr.io/growth-infi/calendar-invite-platform-web:${IMAGE_TAG:-latest}
+    image: ghcr.io/aidaptivegrowthinfi/calendar-invite-platform-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on: [api]
     ports:

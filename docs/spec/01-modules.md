@@ -113,6 +113,11 @@ Effective daily ceiling is the **lower** of `daily_capacity_target` (default
 actually seen). A discovered limit is stored and reused, never rediscovered by
 breaching it again.
 
+Microsoft mailboxes also belong to a `provider_tenant` (ADR 0066), whose
+`daily_budget` caps the sum of all its mailboxes' commitments per day. Connection
+collects the tenant's licence count (or its TERRL from the Exchange admin
+center) and refuses `onmicrosoft.com` sending addresses.
+
 Must not: match mailboxes on `email`. `provider_account_id` is the uniqueness
 key — a renamed Workspace address is the same account, and matching on the
 address creates a duplicate mailbox holding a second copy of the same tokens.
@@ -176,14 +181,17 @@ operation for every contact holding a successful create, not a flag flip.
 ### `planning` — slices 4 and 6
 
 Owns `send_plan`, `send_plan_item`, `mailbox_capacity_day`. ADRs 0013, 0045,
-0047, 0048, 0058, 0060.
+0047, 0048, 0058, 0060, 0066.
 
 Computes a plan; runs admission. **Approval is one transaction** and it carries
 both gates, per slice 6:
 
-    FOR UPDATE on the mailbox_capacity_day rows in the window
+    FOR UPDATE on the mailbox_capacity_day rows in the window, including every
+      mailbox of any Microsoft tenant the plan touches (ADR 0066)
     FOR UPDATE on the usage_counter rows for the period
     capacity admission against each mailbox's *current* effective ceiling
+    tenant admission: per day, the tenant's summed committed + projected
+      <= provider_tenant.daily_budget (Microsoft only)
     entitlement test: used + projected <= limit_value, per period the window crosses
     freeze membership (campaign module, same transaction)
     insert send_plan_item rows
@@ -192,7 +200,8 @@ both gates, per slice 6:
     send_plan.status = 'approved'
 
 A refusal is a `refused` plan carrying `admission_shortfall` — how many
-operations did not fit and on which days — because "your campaign was refused"
+operations did not fit, on which days, and whether a mailbox or a Microsoft
+tenant budget was the limit — because "your campaign was refused"
 is not an actionable message. The plan is kept; the next attempt is a new
 version.
 

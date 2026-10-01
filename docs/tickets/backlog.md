@@ -7,6 +7,12 @@ Tickets are sized to a few days, not hours. Each names its dependencies, the
 decisions that bind it, and acceptance criteria written as things that must be
 demonstrably true rather than as work to be done.
 
+Mirrored in Jira, project KAN ("GI Tech"), labelled `spec-v2`: epics KAN-73 to
+KAN-89, tickets KAN-90 to KAN-183, each carrying its backlog id as a label
+(`E8-3`) and a lane label. Dependencies are Jira "Blocks" links. KAN-1 to
+KAN-72 are the pre-spec plan, labelled `pre-spec` and kept for reference.
+This file stays the source of truth; Jira tracks status.
+
 **Read `../spec/00-overview.md` before picking up any ticket.** Its
 cross-cutting rules bind every one of them, and several tickets below are one
 sentence long only because those rules are not restated per ticket.
@@ -673,7 +679,7 @@ Acceptance:
 ### E10-6 · Calendar email mode
 
 **Refs**: ADRs 0015, 0021, 0022, 0023; slices 4, 5
-**Depends on**: E10-5, E8-6
+**Depends on**: E10-5, E8-6, E10-7
 
 Application-owned templates and ICS generation; controlled templates, not a
 builder.
@@ -852,6 +858,226 @@ and it is **not a plan dimension** (ADR 0065).
 E14-6 is the only mechanism that resolves an `unknown` attempt. Until it
 exists, affected contacts block indefinitely — which is correct behaviour, and
 is why it ships with E8-4 rather than later.
+
+---
+
+## Deliverability review additions
+
+Added 2026-10-01 from findings W30 to W43 (`architecture-review-findings.md`
+section G). Where a finding needs an ADR first, the ticket names it under
+**Decision**; the workaround is to build behind configuration so the ADR
+changes a value, not a code path.
+
+### E4-4 · Microsoft tenant budget (TERRL)
+
+**Refs**: W30, ADRs 0047, 0058, 0066; slice 1 `provider_tenant`
+**Depends on**: E4-3; the admission half lands with E7-2
+
+Rewritten 2026-10-01 when ADR 0066 corrected W30: the per-mailbox limit it was
+written against was withdrawn by Microsoft. The per-mailbox default stays 2,000
+for both providers. The risk is the tenant-wide external recipient limit.
+
+Acceptance:
+- Microsoft connection records the Entra `tid` and upserts a `provider_tenant`
+  row; asks for the licence count or the EAC TERRL; refuses `onmicrosoft.com`
+  sending addresses.
+- `daily_budget` = `budget_fraction` (default 0.50) of TERRL, where TERRL is the
+  declared value, else `500 x licences^0.7 + 9500`, else the 5,000 trial cap.
+  Recomputed when either declared value changes. A table-driven test covers all
+  three paths.
+- Approval (E7-2) locks every mailbox-day of a touched tenant and refuses when a
+  day's tenant sum exceeds `daily_budget`; the shortfall names the tenant.
+  A concurrency test: two campaigns on different mailboxes of one tenant, only
+  one admitted when together they exceed the budget.
+- The throttle paces at most 20 messages/minute per Microsoft mailbox and never
+  dispatches for a tenant whose trailing-24-hour count would exceed its budget.
+- A sending-limit signal from any mailbox sets the tenant's `throttle_state`.
+
+### E7-4 · Engagement-ordered planning and sunset
+
+**Refs**: W38; slices 4, 7
+**Depends on**: E7-1
+
+Acceptance:
+- Plan items carry an engagement tier from prior responses and attendance
+  within the organisation; dispatch orders by tier, then `reserved_at`.
+- Contacts with no engagement across N campaigns (configuration) are excluded
+  from the default selection and shown as a count the organiser can include.
+- Sunset never writes a `suppression_entry`.
+
+### E8-8 · Bucket-fair dispatch
+
+**Refs**: W33, ADR 0019; slice 4
+**Depends on**: E8-3
+
+Acceptance:
+- `invitation_attempt.delivery_bucket` is written at reservation.
+- The reservation query selects only buckets with throttle capacity and
+  round-robins across them; the `FOR UPDATE SKIP LOCKED` shape is unchanged.
+- A test throttles one bucket and asserts others keep their full rate.
+
+### E10-7 · MIME structure and ICS renderer
+
+**Refs**: W36, ADRs 0022, 0023; slice 3
+**Depends on**: E6-2
+**Decision**: D-2
+
+A pure function from frozen member data and campaign revision to a MIME
+message. Can be built and tested long before the provider adapter.
+
+Acceptance:
+- `multipart/mixed` > `multipart/alternative` (`text/plain`, `text/html`,
+  `text/calendar; method=REQUEST`); `CANCEL` for cancellations.
+- `UID` is `campaign_member.calendar_uid`; `SEQUENCE` is the revision seq.
+- `ORGANIZER` and `From` share the verified domain.
+- Golden-file tests render correctly as an invitation card in Gmail, Outlook
+  and Apple Calendar (recorded once by hand, asserted thereafter).
+
+### E10-8 · ORGANIZER inbound reply ingestion
+
+**Refs**: W36, ADR 0011; slice 4 `invitation_response`
+**Depends on**: E10-3, E10-7, E9-2
+**Decision**: D-2
+
+Acceptance:
+- iTIP `REPLY` mail to the RSVP-host organiser address is parsed into
+  `invitation_response` with a native-reply source.
+- Inbound is verified and deduplicated as webhooks are (E10-3).
+- Non-iTIP mail to that address is forwarded or dropped by configuration,
+  never bounced.
+
+### E10-9 · Authentication checks on native mailbox domains
+
+**Refs**: W34, ADR 0016; slice 5
+**Depends on**: E10-1, E4-1
+
+Acceptance: SPF, DKIM and DMARC are checked for every connected mailbox's
+domain using the E10-1 checker; failures reach the gate for native campaigns
+and are shown on the mailbox.
+
+### E10-10 · Canary stage and in-flight cap
+
+**Refs**: W32, ADR 0019; slice 5
+**Depends on**: E10-4
+**Decision**: D-3
+
+Acceptance:
+- Each delivery bucket of a campaign sends a canary (1-2% or 100-200,
+  configuration) and holds until outcomes reach the minimum sample.
+- `in_flight` is a throttle dimension: submitted but unsettled messages per
+  bucket never exceed the cap.
+- `reconcile-throttle` covers the new dimension.
+
+### E10-11 · Volume-spike cap and smoothing
+
+**Refs**: W37, W43, ADR 0019
+**Depends on**: E10-4
+**Decision**: D-3
+
+Acceptance:
+- A sending domain's daily volume per bucket is capped at a multiple (3x,
+  configuration) of its trailing 14-day average; warm-up is the zero-history
+  case.
+- Each window's budget is spread evenly across the send window; jitter only
+  de-synchronises workers. No randomised human-mimicking delays.
+- The planner spreads a campaign the cap would exceed across days.
+
+### E10-12 · Gmail complaint visibility
+
+**Refs**: W31, ADR 0016; slice 5
+**Depends on**: E10-5
+
+Acceptance:
+- Every calendar email carries a `Feedback-ID` (campaign, organisation, mode,
+  sender).
+- The gate reads Gmail complaint rate as `unknown`, never zero.
+- Postmaster spam rate is ingested to `campaign_health.signals` when
+  available.
+- Unsubscribe, decline and deferral rates are evaluated per bucket.
+
+### E10-13 · Seed self-test and placement probe
+
+**Refs**: W35, ADR 0016
+**Depends on**: E10-6
+
+Acceptance: before launch and on a schedule, a real invitation goes to
+platform-owned seed mailboxes at Gmail, Outlook and Yahoo;
+`Authentication-Results` alignment and inbox-or-spam placement are recorded as
+a gate signal; a failed self-test blocks launch.
+
+### E10-14 · Content and domain-reputation preflight
+
+**Refs**: W41, W40, ADRs 0016, 0023
+**Depends on**: E10-1, E10-7
+
+Acceptance:
+- A rendered HTML body over 100 KB fails preflight.
+- Sending, tracking and RSVP domains are checked for registration age and
+  blocklist status; both are gate inputs.
+- Domain setup defaults to a dedicated subdomain and warns on a root domain
+  (W40).
+
+### E10-15 · Time-to-inbox and the event deadline
+
+**Refs**: W42, ADRs 0019, 0035
+**Depends on**: E10-3, E8-3
+
+Acceptance: submit-to-delivered latency per bucket is recorded and shown; an
+invitation whose expected delivery falls after the event start is not
+submitted and ends `abandoned`.
+
+### E10-16 · IP pool routing
+
+**Refs**: W39, ADRs 0020, 0021
+**Depends on**: E10-3
+**Decision**: D-4
+
+Acceptance: `email_provider_account.ip_pool` routes sends; a dedicated IP has
+its own tracked warm-up independent of the domain's.
+
+### D — Decisions to write
+
+Owner lane. Each unblocks the tickets that name it.
+
+    D-1  DONE 2026-10-01: ADR 0066, Microsoft tenant budget             (W30)
+    D-2  ADR succeeding 0022: MIME structure and ORGANIZER path        (W36)
+    D-3  ADR amending 0019: canary, in-flight, spike cap, smoothing    (W32, W37, W43)
+    D-4  ADR: shared vs dedicated IP and the volume threshold          (W39)
+    D-5  OPEN-S3 threshold values (proposal in open-decisions.md)
+    D-6  OPEN-S2 backoff schedule
+    D-7  OPEN-S4 object storage
+    D-8  OPEN-S5 signing-key rotation policy
+    D-9  OPEN-S1 API key scopes
+
+---
+
+## Working in parallel
+
+Tickets carry a lane, not an owner. Two people work two lanes at a time; the
+sequence diagram above says which tickets are ready.
+
+| Lane | Contents | Notes |
+| --- | --- | --- |
+| `lane-core` | E0 verification, E1, E2, E5, E6, E7, E8, and the E14 jobs that ship with them | The critical path. One person, undivided, as CONTRIBUTING.md says. |
+| `lane-platform` | E3, E4, E9, E10, E11, E12, and their E14 jobs | Independent modules. E3 first - it unblocks E4, E5-2 and E10-1. |
+| `lane-frontend` | E13 | Against `spec/02-api.md`, with a mock server until each endpoint lands. |
+| `lane-owner` | P, D | Accounts and decisions, not code. |
+
+A workable rhythm: one person holds `lane-core` throughout; the other takes E3
+first, then alternates between `lane-platform` and `lane-frontend` as each
+blocks on the core.
+
+Rules that keep two people from colliding:
+- **Migrations merge one at a time.** Drizzle's `meta/` snapshot conflicts.
+  The second pull request to merge rebases and regenerates its migration; it
+  never hand-merges the snapshot.
+- **The API contract moves first.** A change to an endpoint's shape edits
+  `spec/02-api.md` in the same pull request, so the frontend lane is never
+  building against a contract that only exists in the other person's branch.
+- **Modules, not slices.** Split by module (`spec/01-modules.md`), never by
+  schema slice.
+- **A gap is raised, not filled.** CONTRIBUTING.md's rule applies; D tickets
+  are where the answers land.
 
 ---
 

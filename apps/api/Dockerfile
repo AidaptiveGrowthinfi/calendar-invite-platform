@@ -1,6 +1,6 @@
 # ADR 0006: images are built by GitHub Actions, pushed to GHCR, and pulled by
 # Docker Compose on the VPS.
-FROM node:20.20.2-alpine AS build
+FROM node:26.10.0-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 
@@ -14,7 +14,7 @@ RUN pnpm exec tsc -b apps/api
 # Legacy mode copies each workspace package's directory, dist/ included.
 RUN pnpm deploy --legacy --filter @apps/api --prod /app
 
-FROM node:20.20.2-alpine AS runtime
+FROM node:26.10.0-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 

@@ -57,21 +57,34 @@ describeWithDb('withOrg against a live database', () => {
 
     for (const id of [orgA, orgB]) {
       const slug = `test-${id.slice(0, 8)}`;
+      // `organisation` is the anchor and carries no policy, so the migrator
+      // can seed it directly.
       await admin`
         insert into organisation (id, auth_organization_id, name, slug, updated_at)
         values (${id}, ${`auth-${id}`}, ${slug}, ${slug}, now())
       `;
-      await admin`
-        insert into organisation_oauth_client
-          (organisation_id, provider, client_id, client_secret_enc)
-        values (${id}, 'google', ${`client-${id}`}, ${Buffer.from('secret')})
-      `;
+      // Tenant rows go in through withOrg, as the application writes them.
+      // RLS is FORCED and the only policy is for app_user, so the migrator -
+      // which owns the table but holds no bypass - is refused here by design.
+      await withOrg(handle, id, async (tx) =>
+        tx.execute(sql`
+          insert into organisation_oauth_client
+            (organisation_id, provider, client_id, client_secret_enc)
+          values (${id}, 'google', ${`client-${id}`}, ${Buffer.from('secret')})
+        `),
+      );
     }
   });
 
   afterAll(async () => {
+    if (handle !== undefined) {
+      for (const id of [orgA, orgB]) {
+        await withOrg(handle, id, async (tx) =>
+          tx.execute(sql`delete from organisation_oauth_client where organisation_id = ${id}`),
+        );
+      }
+    }
     if (admin !== undefined) {
-      await admin`delete from organisation_oauth_client where organisation_id in ${admin([orgA, orgB])}`;
       await admin`delete from organisation where id in ${admin([orgA, orgB])}`;
     }
     await handle?.close();

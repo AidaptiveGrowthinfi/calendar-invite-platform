@@ -7,14 +7,24 @@ updates:
     open-pull-requests-limit: 5
     groups:
       # One PR for the routine noise, so the two of you review a batch rather
-      # than a stream. Anything that is not a patch bump still arrives alone.
+      # than a stream.
       minor-and-patch:
         update-types: ['minor', 'patch']
+    ignore:
+      # Major versions are deliberate work, not a weekly PR: they change APIs
+      # (ESLint, ioredis, Vite plugins) or must move with the runtime
+      # (@types/node tracks the Node version in .nvmrc and CI). Raise a ticket
+      # and do one at a time.
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    # Majors ARE allowed here. Actions are retired by GitHub on its own
+    # schedule (the Node 20 runtime deprecation), and a major bump of a
+    # first-party action is the usual fix.
 
   - package-ecosystem: docker
     directories:
@@ -23,3 +33,13 @@ updates:
       - /apps/web
     schedule:
       interval: monthly
+    ignore:
+      # The Node major in the images must match .nvmrc, CI's NODE_VERSION and
+      # @types/node. Changing it is one deliberate change across all four, not
+      # three Dependabot PRs that move the images alone.
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
+      # nginx serves static files only; minor and patch releases are taken,
+      # majors are reviewed by hand.
+      - dependency-name: nginx
+        update-types: ['version-update:semver-major']

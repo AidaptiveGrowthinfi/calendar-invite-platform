@@ -13,6 +13,7 @@
  */
 export * as schema from './schema/index';
 export * from './schema/index';
+export * from './timezone';
 
 export {
   createAppDatabase,

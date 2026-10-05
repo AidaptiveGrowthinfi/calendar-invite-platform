@@ -48,5 +48,8 @@
       "brace-expansion@1": "^1.1.21",
       "@esbuild-kit/core-utils>esbuild": "^0.25.0"
     }
+  },
+  "dependencies": {
+    "pnpm": "^12.9.1"
   }
 }
